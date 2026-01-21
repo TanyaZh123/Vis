@@ -1,154 +1,188 @@
-// Преобразуем данные
-const categories = w.xAxis.categories; // Месяцы
-const groupNames = ['Газ', 'Конденсат', 'Нефть'];
+const categories = w.xAxis.data;
 
-// Создаем серии с кастомным отображением
-const seriesData = groupNames.map((name, groupIndex) => {
-  const planData = w.series[groupIndex * 2]?.data || [];
-  const factData = w.series[groupIndex * 2 + 1]?.data || [];
-  
-  return {
-    name: name,
-    data: planData.map((plan, i) => ({
-      y: plan,
-      customData: {
-        plan: plan,
-        fact: factData[i] || 0,
-        percentage: plan > 0 ? Math.round(((factData[i] || 0) / plan) * 100) : 0
-      }
-    })),
-    type: 'column',
-    color: 'transparent',
-    showInLegend: false
-  };
-});
+const CATEGORY_NAMES = [
+  'Категория 1',
+  'Категория 2',
+  'Категория 3'
+];
 
-// Инициализируем Highcharts
-Highcharts.chart('container', {  // Замените 'container' на ID вашего контейнера
-  chart: {
-    type: 'column',
-    ...w.general
-  },
-  title: {
-    text: 'План vs Факт'
-  },
-  xAxis: {
-    categories: categories,
-    crosshair: true
-  },
-  yAxis: {
-    min: 0,
-    title: {
-      text: 'Значения'
-    }
-  },
-  tooltip: {
-    formatter: function() {
-      const point = this.point;
-      const customData = point.customData || {};
-      
-      return `<b>${this.x} - ${this.series.userOptions.originalName || this.series.name}</b><br/>
-              План: <b>${customData.plan || this.point.customData?.plan || 0}</b><br/>
-              Факт: <b>${customData.fact || this.point.customData?.fact || 0}</b><br/>
-              Выполнение: <b>${customData.percentage || this.point.customData?.percentage || 0}%</b>`;
-    }
-  },
-  plotOptions: {
-    column: {
-      pointPadding: 0.2,
-      borderWidth: 0,
-      groupPadding: 0.15,
-      shadow: false,
-      states: {
-        hover: {
-          enabled: false
+const CATEGORY_COLORS = [
+  '#3b82f6',
+  '#10b981',
+  '#f59e0b'
+];
+
+const GROUP_COUNT = 3;
+const BAR_WIDTH = 14;
+
+const resultSeries = [];
+
+for (let group = 0; group < GROUP_COUNT; group++) {
+  const isRightAxis = group > 0;
+
+  resultSeries.push({
+    name: CATEGORY_NAMES[group],
+    type: 'custom',
+    yAxisIndex: isRightAxis ? 1 : 0,
+    encode: { x: 0, y: 1 },
+
+    renderItem: function (params, api) {
+      const monthIndex = api.value(0);
+      const plan = api.value(1);
+      const fact =
+        w.series[group * 2 + 1]?.data[monthIndex]?.value || 0;
+
+      const percent =
+        plan > 0 ? Math.round((fact / plan) * 100) : 0;
+
+      const baseX = api.coord([monthIndex, 0])[0];
+      const groupOffset =
+        (group - (GROUP_COUNT - 1) / 2) * BAR_WIDTH * 1.6;
+      const x = baseX + groupOffset - BAR_WIDTH / 2;
+
+      const yZero = api.coord([monthIndex, 0])[1];
+      const yPlan = api.coord([monthIndex, plan])[1];
+      const yFact = api.coord([monthIndex, fact])[1];
+
+      const isOver = fact > plan;
+
+      const children = [
+        // ПЛАН (рамка)
+        {
+          type: 'rect',
+          shape: {
+            x,
+            y: yPlan,
+            width: BAR_WIDTH,
+            height: yZero - yPlan
+          },
+          style: {
+            fill: 'rgba(203,213,225,0.25)',
+            stroke: CATEGORY_COLORS[group],
+            lineWidth: 1
+          }
+        },
+
+        // ФАКТ
+        {
+          type: 'rect',
+          shape: isOver
+            ? {
+                x,
+                y: yFact,
+                width: BAR_WIDTH,
+                height: yZero - yFact
+              }
+            : {
+                x,
+                y: yZero - (yZero - yPlan) * (fact / plan),
+                width: BAR_WIDTH,
+                height: (yZero - yPlan) * (fact / plan)
+              },
+          style: {
+            fill: CATEGORY_COLORS[group],
+            opacity: isOver ? 0.55 : 0.9
+          }
         }
-      }
-    }
-  },
-  series: seriesData,
-  // Кастомная отрисовка после загрузки
-  chart: {
-    events: {
-      load: function() {
-        const chart = this;
-        
-        // Для каждой серии
-        chart.series.forEach((series, seriesIndex) => {
-          if (!series.visible) return;
-          
-          const originalName = groupNames[seriesIndex];
-          series.userOptions.originalName = originalName;
-          
-          // Перерисовываем каждый столбец
-          series.points.forEach((point, pointIndex) => {
-            const plan = point.customData?.plan || 0;
-            const fact = point.customData?.fact || 0;
-            const percentage = point.customData?.percentage || 0;
-            
-            if (point.graphic) {
-              point.graphic.destroy(); // Удаляем стандартный столбец
-            }
-            
-            if (plan <= 0 && fact <= 0) return; // Пропускаем пустые
-            
-            const xAxis = series.xAxis;
-            const yAxis = series.yAxis;
-            
-            const x = point.plotX + series.group.translateX - point.pointWidth/2;
-            const maxVal = Math.max(plan, fact);
-            const planY = yAxis.toPixels(plan);
-            const factY = yAxis.toPixels(fact);
-            const planHeight = yAxis.toPixels(0) - yAxis.toPixels(plan);
-            const factHeight = yAxis.toPixels(0) - yAxis.toPixels(fact);
-            
-            // Рисуем план (фоновый столбец)
-            if (plan > 0) {
-              chart.renderer.rect(
-                x,
-                planY,
-                point.pointWidth,
-                planHeight
-              ).attr({
-                fill: 'rgba(189, 195, 199, 0.3)',
-                stroke: '#95a5a6',
-                'stroke-width': 1
-              }).add(series.group);
-            }
-            
-            // Рисуем факт (наложенный столбец)
-            if (fact > 0) {
-              chart.renderer.rect(
-                x,
-                factY,
-                point.pointWidth,
-                factHeight
-              ).attr({
-                fill: percentage >= 100 ? 'rgba(46, 204, 113, 0.8)' : 'rgba(231, 76, 60, 0.8)',
-                stroke: percentage >= 100 ? '#27ae60' : '#c0392b',
-                'stroke-width': 1
-              }).add(series.group);
-            }
-            
-            // Рисуем процент внутри факта (если он есть)
-            if (fact > 0) {
-              chart.renderer.text(
-                `${percentage}%`,
-                x + point.pointWidth/2,
-                factY + factHeight/2 + 5
-              ).attr({
-                align: 'center',
-                'text-anchor': 'middle',
-                zIndex: 5
-              }).css({
-                color: '#fff',
-                fontWeight: 'bold',
-                fontSize: '11px'
-              }).add(series.group);
-            }
-          });
+      ];
+
+      // ЛИНИЯ ПЛАНА, ЕСЛИ ФАКТ ПРЕВЫСИЛ
+      if (isOver) {
+        children.push({
+          type: 'line',
+          shape: {
+            x1: x - 2,
+            y1: yPlan,
+            x2: x + BAR_WIDTH + 2,
+            y2: yPlan
+          },
+          style: {
+            stroke: CATEGORY_COLORS[group],
+            lineWidth: 2,
+            lineDash: [4, 4]
+          }
         });
       }
+
+      // % НАД МАКСИМУМОМ
+      children.push({
+        type: 'text',
+        style: {
+          text: percent + '%',
+          x: x + BAR_WIDTH / 2,
+          y: Math.min(yPlan, yFact) - 8,
+          fill: CATEGORY_COLORS[group],
+          align: 'center',
+          verticalAlign: 'bottom',
+          font: 'bold 11px sans-serif'
+        }
+      });
+
+      return {
+        type: 'group',
+        children
+      };
+    },
+
+    data: categories.map((_, monthIndex) => {
+      const plan =
+        w.series[group * 2]?.data[monthIndex]?.value || 0;
+      return [monthIndex, plan];
+    }),
+
+    tooltip: {
+      formatter: (params) => {
+        const idx = params.value[0];
+        const plan = params.value[1];
+        const fact =
+          w.series[group * 2 + 1]?.data[idx]?.value || 0;
+        const percent =
+          plan > 0 ? Math.round((fact / plan) * 100) : 0;
+
+        return `
+          <b>${categories[idx]}</b><br/>
+          ${CATEGORY_NAMES[group]}<br/>
+          План: ${plan}<br/>
+          Факт: ${fact}<br/>
+          Выполнение: ${percent}%
+        `;
+      }
     }
-  }
+  });
+}
+
+ColumnChartRender({
+  general: w.general,
+
+  xAxis: {
+    ...w.xAxis,
+    type: 'category',
+    name: 'Месяцы',
+    nameLocation: 'middle',
+    nameGap: 30,
+    data: categories
+  },
+
+  yAxis: [
+    {
+      ...w.yAxis,
+      type: 'value',
+      name: 'Категория 1',
+      nameLocation: 'middle',
+      nameGap: 45
+    },
+    {
+      ...w.yAxis,
+      type: 'value',
+      name: 'Категория 2–3',
+      position: 'right',
+      nameLocation: 'middle',
+      nameGap: 45
+    }
+  ],
+
+  series: resultSeries,
+  legend: w.legend,
+  tooltip: { trigger: 'item' },
+  grid: w.grid
 });
