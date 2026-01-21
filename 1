@@ -2,32 +2,22 @@
 const categories = w.xAxis.categories; // Месяцы
 const seriesData = [];
 
+// Создаем 3 серии (по одной на группу)
 for (let group = 0; group < 3; group++) {
-  const planSeries = w.series[group * 2];
-  const factSeries = w.series[group * 2 + 1];
-  
   seriesData.push({
     name: `Группа ${String.fromCharCode(65 + group)}`, // A, Б, В
-    type: 'bullet', // Используем тип "bullet" для прогресс-бара
-    data: categories.map((month, i) => {
-      const plan = planSeries?.data[i] || 0;
-      const fact = factSeries?.data[i] || 0;
-      
-      return {
-        y: fact, // Текущее значение (факт)
-        target: plan, // Целевое значение (план)
-        color: fact >= plan ? '#27ae60' : '#e74c3c' // Зеленый если выполнен, красный если нет
-      };
-    })
+    data: [],
+    type: 'column',
+    // Специальная обработка для отображения факта внутри плана
+    _groupIndex: group,
+    _isCombined: true
   });
 }
 
-// Создаем диаграмму
+// Инициализируем Highcharts
 Highcharts.chart({
   chart: {
-    type: 'bullet',
-    inverted: false, // Вертикальные столбцы
-    marginLeft: 120, // Отступ для подписей
+    type: 'column',
     ...w.general
   },
   title: {
@@ -35,40 +25,127 @@ Highcharts.chart({
   },
   xAxis: {
     categories: categories,
-    labels: {
-      style: {
-        fontSize: '13px'
-      }
-    }
+    crosshair: true
   },
   yAxis: {
-    gridLineWidth: 0,
-    title: null,
-    labels: {
-      style: {
-        fontSize: '11px'
-      }
+    min: 0,
+    title: {
+      text: 'Значения'
     }
   },
-  legend: {
-    enabled: true
-  },
-  series: seriesData,
   tooltip: {
-    pointFormat: '<b>{point.y}</b> из <b>{point.target}</b><br/>' +
-                 'Выполнение: <b>{point.percentage:.1f}%</b>'
+    formatter: function() {
+      const point = this.point;
+      const customData = point.customData || {};
+      
+      return `<b>${this.x} - ${this.series.name}</b><br/>
+              План: <b>${customData.plan || point.y}</b><br/>
+              Факт: <b>${customData.fact || 0}</b><br/>
+              Выполнение: <b>${customData.percentage || 0}%</b>`;
+    }
   },
   plotOptions: {
-    bullet: {
-      pointPadding: 0.25,
+    column: {
+      pointPadding: 0.2,
       borderWidth: 0,
-      color: '#666', // Цвет плана (фона)
-      targetOptions: {
-        width: '200%', // Ширина плана (фона)
-        color: 'rgba(189, 195, 199, 0.3)', // Полупрозрачный для плана
-        borderWidth: 1,
-        borderColor: '#95a5a6'
+      groupPadding: 0.15,
+      // Кастомная отрисовка точек
+      point: {
+        events: {
+          // При отрисовке точки модифицируем её
+          afterAnimate: function() {
+            const point = this;
+            const series = point.series;
+            const groupIndex = series.options._groupIndex;
+            
+            if (series.options._isCombined) {
+              // Получаем план и факт
+              const plan = w.series[groupIndex * 2]?.data[point.index] || 0;
+              const fact = w.series[groupIndex * 2 + 1]?.data[point.index] || 0;
+              const percentage = plan > 0 ? Math.round((fact / plan) * 100) : 0;
+              
+              // Сохраняем кастомные данные
+              point.customData = {
+                plan: plan,
+                fact: fact,
+                percentage: percentage
+              };
+              
+              // Получаем графический элемент столбца
+              const graphic = point.graphic;
+              if (graphic) {
+                // Очищаем старый
+                graphic.destroy();
+                
+                // Создаем новый сложный графический элемент
+                const renderer = series.chart.renderer;
+                const x = point.plotX + series.group.translateX;
+                const y = point.plotY + series.group.translateY;
+                const width = point.pointWidth;
+                const height = series.yAxis.len - y;
+                
+                // Полная высота (план)
+                const fullHeight = series.yAxis.toPixels(0) - series.yAxis.toPixels(plan);
+                
+                // Высота факта
+                const factHeight = series.yAxis.toPixels(0) - series.yAxis.toPixels(fact);
+                
+                // Создаем группу
+                const group = renderer.g().add(series.group);
+                
+                // Фон (план) - светлый
+                group.add(renderer.rect(
+                  x - width/2,
+                  series.yAxis.toPixels(plan),
+                  width,
+                  fullHeight
+                ).attr({
+                  fill: 'rgba(189, 195, 199, 0.3)',
+                  stroke: '#95a5a6',
+                  'stroke-width': 1
+                }));
+                
+                // Факт - цветной
+                group.add(renderer.rect(
+                  x - width/2,
+                  series.yAxis.toPixels(fact),
+                  width,
+                  factHeight
+                ).attr({
+                  fill: percentage >= 100 ? 'rgba(46, 204, 113, 0.8)' : 'rgba(231, 76, 60, 0.8)',
+                  stroke: percentage >= 100 ? '#27ae60' : '#c0392b',
+                  'stroke-width': 1
+                }));
+                
+                // Подпись процента внутри
+                group.add(renderer.text(
+                  `${percentage}%`,
+                  x,
+                  series.yAxis.toPixels(fact) + factHeight/2
+                ).attr({
+                  align: 'center',
+                  'text-anchor': 'middle',
+                  fill: '#fff',
+                  'font-weight': 'bold',
+                  'font-size': '11px'
+                }));
+                
+                // Сохраняем ссылку
+                point.customGraphic = group;
+              }
+            }
+          }
+        }
       }
     }
-  }
+  },
+  series: seriesData.map((series, seriesIndex) => {
+    // Заполняем данные максимальными значениями (планами)
+    const planSeries = w.series[seriesIndex * 2];
+    return {
+      ...series,
+      data: planSeries?.data || [],
+      color: 'transparent' // Делаем невидимым, будем рисовать кастомно
+    };
+  })
 });
