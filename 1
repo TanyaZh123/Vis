@@ -2,13 +2,13 @@
 const categories = w.xAxis.categories; // Месяцы
 const seriesData = [];
 
-// Названия групп вместо Группа А, Б, В
+// Названия групп
 const groupNames = ['Газ', 'Конденсат', 'Нефть'];
 
 // Создаем 3 серии (по одной на группу)
 for (let group = 0; group < 3; group++) {
   seriesData.push({
-    name: groupNames[group], // Газ, Конденсат, Нефть
+    name: groupNames[group], // Используем реальные названия
     data: [],
     type: 'column',
     // Специальная обработка для отображения факта внутри плана
@@ -85,36 +85,39 @@ Highcharts.chart({
                 const x = point.plotX + series.group.translateX;
                 const y = point.plotY + series.group.translateY;
                 const width = point.pointWidth;
+                const height = series.yAxis.len - y;
                 
                 // Полная высота (план)
-                const planY = series.yAxis.toPixels(plan);
-                const fullHeight = series.yAxis.toPixels(0) - planY;
+                const fullHeight = series.yAxis.toPixels(0) - series.yAxis.toPixels(Math.max(plan, fact));
+                
+                // Высота плана
+                const planHeight = series.yAxis.toPixels(0) - series.yAxis.toPixels(plan);
                 
                 // Высота факта
-                const factY = series.yAxis.toPixels(fact);
-                const factHeight = series.yAxis.toPixels(0) - factY;
+                const factHeight = series.yAxis.toPixels(0) - series.yAxis.toPixels(fact);
                 
                 // Создаем группу
                 const group = renderer.g().add(series.group);
                 
-                // Фон (план) - прозрачный контур
-                group.add(renderer.rect(
-                  x - width/2,
-                  planY,
-                  width,
-                  fullHeight
-                ).attr({
-                  fill: 'transparent', // Прозрачная заливка
-                  stroke: '#95a5a6',
-                  'stroke-width': 1,
-                  'stroke-dasharray': '3, 3' // Пунктирная линия для плана
-                }));
+                // Фон (план) - светлый
+                if (plan > 0) {
+                  group.add(renderer.rect(
+                    x - width/2,
+                    series.yAxis.toPixels(plan),
+                    width,
+                    planHeight
+                  ).attr({
+                    fill: 'rgba(189, 195, 199, 0.3)',
+                    stroke: '#95a5a6',
+                    'stroke-width': 1
+                  }));
+                }
                 
-                // Факт - цветной, но без растягивания цвета
+                // Факт - цветной (если есть значение)
                 if (fact > 0) {
                   group.add(renderer.rect(
                     x - width/2,
-                    factY,
+                    series.yAxis.toPixels(fact),
                     width,
                     factHeight
                   ).attr({
@@ -129,41 +132,15 @@ Highcharts.chart({
                   group.add(renderer.text(
                     `${percentage}%`,
                     x,
-                    factY + factHeight/2
+                    series.yAxis.toPixels(fact) + factHeight/2
                   ).attr({
                     align: 'center',
                     'text-anchor': 'middle',
                     fill: '#fff',
                     'font-weight': 'bold',
                     'font-size': '11px'
-                  }));
-                }
-                
-                // Подпись сверху для плана
-                group.add(renderer.text(
-                  `${Math.round(plan)}`,
-                  x,
-                    planY - 5
-                ).attr({
-                  align: 'center',
-                  'text-anchor': 'middle',
-                  fill: '#95a5a6',
-                  'font-weight': 'bold',
-                  'font-size': '10px'
-                }));
-                
-                // Подпись для факта (если есть)
-                if (fact > 0 && factHeight > 20) {
-                  group.add(renderer.text(
-                    `${Math.round(fact)}`,
-                    x,
-                    factY + factHeight + 15
-                  ).attr({
-                    align: 'center',
-                    'text-anchor': 'middle',
-                    fill: percentage >= 100 ? '#27ae60' : '#c0392b',
-                    'font-weight': 'bold',
-                    'font-size': '10px'
+                  }).css({
+                    fontSize: '11px'
                   }));
                 }
                 
@@ -177,7 +154,7 @@ Highcharts.chart({
     }
   },
   series: seriesData.map((series, seriesIndex) => {
-    // Заполняем данные максимальными значениями (планами)
+    // Заполняем данными максимальными значениями (планами)
     const planSeries = w.series[seriesIndex * 2];
     return {
       ...series,
