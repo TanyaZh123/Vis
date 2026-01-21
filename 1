@@ -1,80 +1,46 @@
-// Все определяем в одном месте
 const categories = w.xAxis.categories;
-const seriesData = [];
+const series = [];
 
-// Непосредственно создаем данные серий
+// Для каждой группы
 for (let group = 0; group < 3; group++) {
-  // Определяем названия и цвета
-  let groupName, planColor, factColor, borderColor;
+  const groupName = ['Газ', 'Конденсат', 'Нефть'][group];
+  const colors = [
+    { plan: '#E8F0FE', fact: '#4285F4' }, // Газ
+    { plan: '#FFEBEE', fact: '#DB4437' }, // Конденсат
+    { plan: '#FFF8E1', fact: '#F4B400' }  // Нефть
+  ][group];
   
-  if (group === 0) { // Газ
-    groupName = 'Газ';
-    planColor = 'rgba(66, 133, 244, 0.3)';
-    factColor = 'rgba(66, 133, 244, 0.9)';
-    borderColor = '#4285F4';
-  } else if (group === 1) { // Конденсат
-    groupName = 'Конденсат';
-    planColor = 'rgba(219, 68, 55, 0.3)';
-    factColor = 'rgba(219, 68, 55, 0.9)';
-    borderColor = '#DB4437';
-  } else { // Нефть
-    groupName = 'Нефть';
-    planColor = 'rgba(244, 180, 0, 0.3)';
-    factColor = 'rgba(244, 180, 0, 0.9)';
-    borderColor = '#F4B400';
-  }
-  
-  // План
   const planData = w.series[group * 2]?.data || [];
-  seriesData.push({
+  const factData = w.series[group * 2 + 1]?.data || [];
+  
+  // План - широкий светлый столбец
+  series.push({
     name: `План ${groupName}`,
     data: planData,
     type: 'column',
-    color: planColor,
-    borderColor: borderColor,
+    color: colors.plan,
+    borderColor: '#CCC',
     borderWidth: 1,
     grouping: false,
     pointPadding: 0.15,
-    groupPadding: 0.2,
     zIndex: 1
   });
   
-  // Факт
-  const factData = w.series[group * 2 + 1]?.data || [];
-  seriesData.push({
+  // Факт - узкий цветной внутри
+  series.push({
     name: `Факт ${groupName}`,
-    data: factData.map((fact, i) => {
-      const plan = planData[i] || 0;
-      const percentage = plan > 0 ? (fact / plan * 100) : 0;
-      
-      return {
-        y: fact,
-        color: percentage >= 100 ? 'rgba(15, 157, 88, 0.9)' : factColor,
-        customData: { plan: plan, percentage: percentage }
-      };
-    }),
+    data: factData,
     type: 'column',
-    borderWidth: 0,
+    color: colors.fact,
+    borderColor: colors.fact,
+    borderWidth: 1,
     grouping: false,
     pointPadding: 0.15,
-    pointWidth: 15,
-    zIndex: 2,
-    dataLabels: {
-      enabled: true,
-      formatter: function() {
-        return `${(this.point.customData?.percentage || 0).toFixed(0)}%`;
-      },
-      style: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: '11px'
-      },
-      verticalAlign: 'middle'
-    }
+    pointWidth: 20, // Уже чем план
+    zIndex: 2
   });
 }
 
-// Создаем диаграмму
 Highcharts.chart({
   chart: {
     type: 'column',
@@ -84,8 +50,8 @@ Highcharts.chart({
     categories: categories,
     labels: {
       formatter: function() {
-        const monthIndex = Math.floor(this.pos / 3);
-        if (this.pos % 3 === 1) {
+        const monthIndex = Math.floor(this.pos / 6); // 6 столбцов на месяц
+        if (this.pos % 6 === 2) { // Центральная позиция
           return `<b>${categories[monthIndex]}</b>`;
         }
         return '';
@@ -96,14 +62,19 @@ Highcharts.chart({
     min: 0,
     title: { text: 'Тыс. тонн' }
   },
-  series: seriesData,
+  plotOptions: {
+    column: {
+      stacking: false
+    }
+  },
+  series: series,
   tooltip: {
     shared: true,
     formatter: function() {
       const points = this.points;
-      const groupIndex = Math.floor(points[0].point.index % 3);
-      const monthIndex = Math.floor(points[0].point.index / 3);
-      const groupNames = ['Газ', 'Конденсат', 'Нефть'];
+      const groupIndex = Math.floor(points[0]?.point.index / 2); // 0,1,2
+      const monthIndex = points[0]?.point.index;
+      const groupName = ['Газ', 'Конденсат', 'Нефть'][groupIndex];
       
       let plan = 0, fact = 0;
       points.forEach(p => {
@@ -111,12 +82,10 @@ Highcharts.chart({
         if (p.series.name.includes('Факт')) fact = p.y;
       });
       
-      const percent = plan > 0 ? (fact / plan * 100).toFixed(1) : 0;
-      
-      return `<b>${categories[monthIndex]} - ${groupNames[groupIndex]}</b><br/>
+      return `<b>${categories[monthIndex]} - ${groupName}</b><br/>
               План: ${plan}<br/>
               Факт: ${fact}<br/>
-              Выполнение: ${percent}%`;
+              Выполнение: ${plan > 0 ? ((fact/plan)*100).toFixed(1) : 0}%`;
     }
   }
 });
