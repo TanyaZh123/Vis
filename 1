@@ -1,0 +1,74 @@
+// Преобразуем данные
+const categories = w.xAxis.categories; // Месяцы
+const seriesData = [];
+
+for (let group = 0; group < 3; group++) {
+  const planSeries = w.series[group * 2];
+  const factSeries = w.series[group * 2 + 1];
+  
+  seriesData.push({
+    name: `Группа ${String.fromCharCode(65 + group)}`, // A, Б, В
+    type: 'bullet', // Используем тип "bullet" для прогресс-бара
+    data: categories.map((month, i) => {
+      const plan = planSeries?.data[i] || 0;
+      const fact = factSeries?.data[i] || 0;
+      
+      return {
+        y: fact, // Текущее значение (факт)
+        target: plan, // Целевое значение (план)
+        color: fact >= plan ? '#27ae60' : '#e74c3c' // Зеленый если выполнен, красный если нет
+      };
+    })
+  });
+}
+
+// Создаем диаграмму
+Highcharts.chart({
+  chart: {
+    type: 'bullet',
+    inverted: false, // Вертикальные столбцы
+    marginLeft: 120, // Отступ для подписей
+    ...w.general
+  },
+  title: {
+    text: 'План vs Факт'
+  },
+  xAxis: {
+    categories: categories,
+    labels: {
+      style: {
+        fontSize: '13px'
+      }
+    }
+  },
+  yAxis: {
+    gridLineWidth: 0,
+    title: null,
+    labels: {
+      style: {
+        fontSize: '11px'
+      }
+    }
+  },
+  legend: {
+    enabled: true
+  },
+  series: seriesData,
+  tooltip: {
+    pointFormat: '<b>{point.y}</b> из <b>{point.target}</b><br/>' +
+                 'Выполнение: <b>{point.percentage:.1f}%</b>'
+  },
+  plotOptions: {
+    bullet: {
+      pointPadding: 0.25,
+      borderWidth: 0,
+      color: '#666', // Цвет плана (фона)
+      targetOptions: {
+        width: '200%', // Ширина плана (фона)
+        color: 'rgba(189, 195, 199, 0.3)', // Полупрозрачный для плана
+        borderWidth: 1,
+        borderColor: '#95a5a6'
+      }
+    }
+  }
+});
