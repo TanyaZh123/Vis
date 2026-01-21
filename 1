@@ -1,3 +1,6 @@
+// Сначала определяем все переменные и данные
+const categories = w.xAxis.categories; // Месяцы
+
 // Словарь для названий групп
 const groupNames = {
   0: 'Газ',
@@ -8,97 +11,99 @@ const groupNames = {
 // Цвета для каждой группы
 const groupColors = {
   0: { // Газ
-    plan: 'rgba(66, 133, 244, 0.3)', // Синий полупрозрачный
-    fact: 'rgba(66, 133, 244, 0.9)', // Синий насыщенный
+    plan: 'rgba(66, 133, 244, 0.3)',
+    fact: 'rgba(66, 133, 244, 0.9)',
     border: '#4285F4'
   },
   1: { // Конденсат
-    plan: 'rgba(219, 68, 55, 0.3)', // Красный полупрозрачный
-    fact: 'rgba(219, 68, 55, 0.9)', // Красный насыщенный
+    plan: 'rgba(219, 68, 55, 0.3)',
+    fact: 'rgba(219, 68, 55, 0.9)',
     border: '#DB4437'
   },
   2: { // Нефть
-    plan: 'rgba(244, 180, 0, 0.3)', // Желтый полупрозрачный
-    fact: 'rgba(244, 180, 0, 0.9)', // Желтый насыщенный
+    plan: 'rgba(244, 180, 0, 0.3)',
+    fact: 'rgba(244, 180, 0, 0.9)',
     border: '#F4B400'
   }
 };
 
-// Преобразуем данные
-const categories = w.xAxis.categories; // Месяцы
-const series = [];
-
-// Добавляем планы как фон
-for (let group = 0; group < 3; group++) {
-  const planData = w.series[group * 2]?.data || [];
-  const groupName = groupNames[group];
-  const colors = groupColors[group];
+// Подготавливаем серии данных
+const prepareSeries = () => {
+  const series = [];
   
-  series.push({
-    name: `План ${groupName}`,
-    data: planData.map(value => ({
-      y: value,
-      color: colors.plan
-    })),
-    type: 'column',
-    borderColor: colors.border,
-    borderWidth: 1,
-    grouping: false,
-    pointPadding: 0.15,
-    groupPadding: 0.2,
-    zIndex: 1
-  });
-}
-
-// Добавляем факты как внутренние столбцы
-for (let group = 0; group < 3; group++) {
-  const planData = w.series[group * 2]?.data || [];
-  const factData = w.series[group * 2 + 1]?.data || [];
-  const groupName = groupNames[group];
-  const colors = groupColors[group];
+  // Добавляем планы как фон
+  for (let group = 0; group < 3; group++) {
+    const planData = w.series[group * 2]?.data || [];
+    const groupName = groupNames[group];
+    const colors = groupColors[group];
+    
+    series.push({
+      name: `План ${groupName}`,
+      data: planData.map(value => ({
+        y: value,
+        color: colors.plan
+      })),
+      type: 'column',
+      borderColor: colors.border,
+      borderWidth: 1,
+      grouping: false,
+      pointPadding: 0.15,
+      groupPadding: 0.2,
+      zIndex: 1
+    });
+  }
   
-  series.push({
-    name: `Факт ${groupName}`,
-    data: factData.map((fact, i) => {
-      const plan = planData[i] || 0;
-      const percentage = plan > 0 ? (fact / plan * 100) : 0;
-      
-      return {
-        y: fact,
-        // Динамический цвет: зеленый если выполнение >= 100%, иначе цвет группы
-        color: percentage >= 100 ? 
-               'rgba(15, 157, 88, 0.9)' : // Зеленый для выполнения
-               colors.fact, // Цвет группы
-        customData: {
-          plan: plan,
-          percentage: percentage
-        }
-      };
-    }),
-    type: 'column',
-    borderColor: '#000',
-    borderWidth: 0,
-    grouping: false,
-    pointPadding: 0.15,
-    pointWidth: 15, // Уже чем план
-    zIndex: 2,
-    dataLabels: {
-      enabled: true,
-      formatter: function() {
-        const perc = this.point.customData?.percentage || 0;
-        return `${perc.toFixed(0)}%`;
-      },
-      style: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: '11px',
-        textOutline: '1px contrast'
-      },
-      verticalAlign: 'middle',
-      inside: true
-    }
-  });
-}
+  // Добавляем факты как внутренние столбцы
+  for (let group = 0; group < 3; group++) {
+    const planData = w.series[group * 2]?.data || [];
+    const factData = w.series[group * 2 + 1]?.data || [];
+    const groupName = groupNames[group];
+    const colors = groupColors[group];
+    
+    series.push({
+      name: `Факт ${groupName}`,
+      data: factData.map((fact, i) => {
+        const plan = planData[i] || 0;
+        const percentage = plan > 0 ? (fact / plan * 100) : 0;
+        
+        return {
+          y: fact,
+          color: percentage >= 100 ? 
+                 'rgba(15, 157, 88, 0.9)' : 
+                 colors.fact,
+          customData: {
+            plan: plan,
+            percentage: percentage
+          }
+        };
+      }),
+      type: 'column',
+      borderColor: '#000',
+      borderWidth: 0,
+      grouping: false,
+      pointPadding: 0.15,
+      pointWidth: 15,
+      zIndex: 2,
+      dataLabels: {
+        enabled: true,
+        formatter: function() {
+          const perc = this.point.customData?.percentage || 0;
+          return `${perc.toFixed(0)}%`;
+        },
+        style: {
+          color: '#fff',
+          fontWeight: 'bold',
+          fontSize: '11px',
+          textOutline: '1px contrast'
+        },
+        verticalAlign: 'middle',
+        inside: true
+      }
+    });
+  }
+  
+  return series;
+};
 
 // Создаем диаграмму
 Highcharts.chart({
@@ -113,14 +118,13 @@ Highcharts.chart({
   xAxis: {
     categories: categories,
     crosshair: true,
-    // Настройка для отображения 3 групп в месяце
     labels: {
       formatter: function() {
         const groupNamesList = ['Газ', 'Конденсат', 'Нефть'];
         const groupIndex = this.pos % 3;
         const monthIndex = Math.floor(this.pos / 3);
         
-        if (groupIndex === 1) { // Центральная группа
+        if (groupIndex === 1) {
           return `<b style="font-size: 12px;">${categories[monthIndex]}</b>`;
         }
         return '';
@@ -128,14 +132,7 @@ Highcharts.chart({
       style: {
         fontSize: '11px'
       }
-    },
-    // Добавляем подписи групп под столбцами
-    plotLines: [{
-      value: -0.5,
-      color: '#e0e0e0',
-      width: 1,
-      zIndex: 5
-    }]
+    }
   },
   yAxis: {
     min: 0,
@@ -164,7 +161,7 @@ Highcharts.chart({
       }
     }
   },
-  series: series,
+  series: prepareSeries(), // Используем функцию для подготовки данных
   tooltip: {
     shared: true,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -182,7 +179,6 @@ Highcharts.chart({
       
       let tooltip = `<div style="margin-bottom: 5px;"><b>${month} - ${groupName}</b></div>`;
       
-      // Ищем план и факт
       let planValue = 0;
       let factValue = 0;
       
@@ -212,11 +208,7 @@ Highcharts.chart({
     itemStyle: {
       fontSize: '11px',
       fontWeight: 'normal'
-    },
-    itemHoverStyle: {
-      color: '#4285F4'
-    },
-    symbolRadius: 2
+    }
   },
   credits: {
     enabled: false
