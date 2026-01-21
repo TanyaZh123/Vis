@@ -1,91 +1,188 @@
-const categories = w.xAxis.categories;
-const series = [];
+// Преобразуем данные
+const categories = w.xAxis.categories; // Месяцы
+const seriesData = [];
 
-// Для каждой группы
+// Названия групп вместо Группа А, Б, В
+const groupNames = ['Газ', 'Конденсат', 'Нефть'];
+
+// Создаем 3 серии (по одной на группу)
 for (let group = 0; group < 3; group++) {
-  const groupName = ['Газ', 'Конденсат', 'Нефть'][group];
-  const colors = [
-    { plan: '#E8F0FE', fact: '#4285F4' }, // Газ
-    { plan: '#FFEBEE', fact: '#DB4437' }, // Конденсат
-    { plan: '#FFF8E1', fact: '#F4B400' }  // Нефть
-  ][group];
-  
-  const planData = w.series[group * 2]?.data || [];
-  const factData = w.series[group * 2 + 1]?.data || [];
-  
-  // План - широкий светлый столбец
-  series.push({
-    name: `План ${groupName}`,
-    data: planData,
+  seriesData.push({
+    name: groupNames[group], // Газ, Конденсат, Нефть
+    data: [],
     type: 'column',
-    color: colors.plan,
-    borderColor: '#CCC',
-    borderWidth: 1,
-    grouping: false,
-    pointPadding: 0.15,
-    zIndex: 1
-  });
-  
-  // Факт - узкий цветной внутри
-  series.push({
-    name: `Факт ${groupName}`,
-    data: factData,
-    type: 'column',
-    color: colors.fact,
-    borderColor: colors.fact,
-    borderWidth: 1,
-    grouping: false,
-    pointPadding: 0.15,
-    pointWidth: 20, // Уже чем план
-    zIndex: 2
+    // Специальная обработка для отображения факта внутри плана
+    _groupIndex: group,
+    _isCombined: true
   });
 }
 
+// Инициализируем Highcharts
 Highcharts.chart({
   chart: {
     type: 'column',
     ...w.general
   },
+  title: {
+    text: 'План vs Факт'
+  },
   xAxis: {
     categories: categories,
-    labels: {
-      formatter: function() {
-        const monthIndex = Math.floor(this.pos / 6); // 6 столбцов на месяц
-        if (this.pos % 6 === 2) { // Центральная позиция
-          return `<b>${categories[monthIndex]}</b>`;
-        }
-        return '';
-      }
-    }
+    crosshair: true
   },
   yAxis: {
     min: 0,
-    title: { text: 'Тыс. тонн' }
+    title: {
+      text: 'Значения'
+    }
+  },
+  tooltip: {
+    formatter: function() {
+      const point = this.point;
+      const customData = point.customData || {};
+      
+      return `<b>${this.x} - ${this.series.name}</b><br/>
+              План: <b>${customData.plan || point.y}</b><br/>
+              Факт: <b>${customData.fact || 0}</b><br/>
+              Выполнение: <b>${customData.percentage || 0}%</b>`;
+    }
   },
   plotOptions: {
     column: {
-      stacking: false
+      pointPadding: 0.2,
+      borderWidth: 0,
+      groupPadding: 0.15,
+      // Кастомная отрисовка точек
+      point: {
+        events: {
+          // При отрисовке точки модифицируем её
+          afterAnimate: function() {
+            const point = this;
+            const series = point.series;
+            const groupIndex = series.options._groupIndex;
+            
+            if (series.options._isCombined) {
+              // Получаем план и факт
+              const plan = w.series[groupIndex * 2]?.data[point.index] || 0;
+              const fact = w.series[groupIndex * 2 + 1]?.data[point.index] || 0;
+              const percentage = plan > 0 ? Math.round((fact / plan) * 100) : 0;
+              
+              // Сохраняем кастомные данные
+              point.customData = {
+                plan: plan,
+                fact: fact,
+                percentage: percentage
+              };
+              
+              // Получаем графический элемент столбца
+              const graphic = point.graphic;
+              if (graphic) {
+                // Очищаем старый
+                graphic.destroy();
+                
+                // Создаем новый сложный графический элемент
+                const renderer = series.chart.renderer;
+                const x = point.plotX + series.group.translateX;
+                const y = point.plotY + series.group.translateY;
+                const width = point.pointWidth;
+                
+                // Полная высота (план)
+                const planY = series.yAxis.toPixels(plan);
+                const fullHeight = series.yAxis.toPixels(0) - planY;
+                
+                // Высота факта
+                const factY = series.yAxis.toPixels(fact);
+                const factHeight = series.yAxis.toPixels(0) - factY;
+                
+                // Создаем группу
+                const group = renderer.g().add(series.group);
+                
+                // Фон (план) - прозрачный контур
+                group.add(renderer.rect(
+                  x - width/2,
+                  planY,
+                  width,
+                  fullHeight
+                ).attr({
+                  fill: 'transparent', // Прозрачная заливка
+                  stroke: '#95a5a6',
+                  'stroke-width': 1,
+                  'stroke-dasharray': '3, 3' // Пунктирная линия для плана
+                }));
+                
+                // Факт - цветной, но без растягивания цвета
+                if (fact > 0) {
+                  group.add(renderer.rect(
+                    x - width/2,
+                    factY,
+                    width,
+                    factHeight
+                  ).attr({
+                    fill: percentage >= 100 ? 'rgba(46, 204, 113, 0.8)' : 'rgba(231, 76, 60, 0.8)',
+                    stroke: percentage >= 100 ? '#27ae60' : '#c0392b',
+                    'stroke-width': 1
+                  }));
+                }
+                
+                // Подпись процента внутри (только если есть факт)
+                if (fact > 0) {
+                  group.add(renderer.text(
+                    `${percentage}%`,
+                    x,
+                    factY + factHeight/2
+                  ).attr({
+                    align: 'center',
+                    'text-anchor': 'middle',
+                    fill: '#fff',
+                    'font-weight': 'bold',
+                    'font-size': '11px'
+                  }));
+                }
+                
+                // Подпись сверху для плана
+                group.add(renderer.text(
+                  `${Math.round(plan)}`,
+                  x,
+                    planY - 5
+                ).attr({
+                  align: 'center',
+                  'text-anchor': 'middle',
+                  fill: '#95a5a6',
+                  'font-weight': 'bold',
+                  'font-size': '10px'
+                }));
+                
+                // Подпись для факта (если есть)
+                if (fact > 0 && factHeight > 20) {
+                  group.add(renderer.text(
+                    `${Math.round(fact)}`,
+                    x,
+                    factY + factHeight + 15
+                  ).attr({
+                    align: 'center',
+                    'text-anchor': 'middle',
+                    fill: percentage >= 100 ? '#27ae60' : '#c0392b',
+                    'font-weight': 'bold',
+                    'font-size': '10px'
+                  }));
+                }
+                
+                // Сохраняем ссылку
+                point.customGraphic = group;
+              }
+            }
+          }
+        }
+      }
     }
   },
-  series: series,
-  tooltip: {
-    shared: true,
-    formatter: function() {
-      const points = this.points;
-      const groupIndex = Math.floor(points[0]?.point.index / 2); // 0,1,2
-      const monthIndex = points[0]?.point.index;
-      const groupName = ['Газ', 'Конденсат', 'Нефть'][groupIndex];
-      
-      let plan = 0, fact = 0;
-      points.forEach(p => {
-        if (p.series.name.includes('План')) plan = p.y;
-        if (p.series.name.includes('Факт')) fact = p.y;
-      });
-      
-      return `<b>${categories[monthIndex]} - ${groupName}</b><br/>
-              План: ${plan}<br/>
-              Факт: ${fact}<br/>
-              Выполнение: ${plan > 0 ? ((fact/plan)*100).toFixed(1) : 0}%`;
-    }
-  }
+  series: seriesData.map((series, seriesIndex) => {
+    // Заполняем данные максимальными значениями (планами)
+    const planSeries = w.series[seriesIndex * 2];
+    return {
+      ...series,
+      data: planSeries?.data || [],
+      color: 'transparent' // Делаем невидимым, будем рисовать кастомно
+    };
+  })
 });
