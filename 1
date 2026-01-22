@@ -1,30 +1,48 @@
-// Функция для автоматического определения шага шкалы
-function getNiceInterval(maxValue) {
-  if (maxValue <= 0) return 1;
+// Рассчитываем максимумы для осей
+let maxLeft = 0, maxRight = 0;
+
+for (let group = 0; group < GROUP_COUNT; group++) {
+  const isRight = group > 0;
   
-  const magnitude = Math.pow(10, Math.floor(Math.log10(maxValue)));
-  const normalized = maxValue / magnitude;
-  
-  if (normalized <= 2) return magnitude / 2;
-  if (normalized <= 5) return magnitude;
-  return 2 * magnitude;
+  for (let i = 0; i < categories.length; i++) {
+    const plan = w.series[group * 2]?.data[i]?.value || 0;
+    const fact = w.series[group * 2 + 1]?.data[i]?.value || 0;
+    const maxVal = Math.max(plan, fact);
+    
+    if (isRight) maxRight = Math.max(maxRight, maxVal);
+    else maxLeft = Math.max(maxLeft, maxVal);
+  }
 }
 
-// Использование:
-yAxis: [
-  {
-    ...w.yAxis,
-    type: 'value',
-    name: 'Категория 1',
-    nameLocation: 'middle',
-    nameGap: 45,
-    min: 0,
-    max: maxLeftAxis,
-    interval: getNiceInterval(maxLeftAxis)
-  },
-  // ... аналогично для правой оси
-]
+// Округляем с запасом 10%
+maxLeft = Math.ceil(maxLeft * 1.1);
+maxRight = Math.ceil(maxRight * 1.1);
 
+ColumnChartRender({
+  // ... другие параметры
+  yAxis: [
+    {
+      ...w.yAxis,
+      type: 'value',
+      name: 'Категория 1',
+      nameLocation: 'middle',
+      nameGap: 45,
+      min: 0,
+      max: maxLeft
+    },
+    {
+      ...w.yAxis,
+      type: 'value',
+      name: 'Категория 2–3',
+      position: 'right',
+      nameLocation: 'middle',
+      nameGap: 45,
+      min: 0,
+      max: maxRight
+    }
+  ],
+  // ... другие параметры
+});
 
 
 
