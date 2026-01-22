@@ -1,3 +1,34 @@
+// Функция для автоматического определения шага шкалы
+function getNiceInterval(maxValue) {
+  if (maxValue <= 0) return 1;
+  
+  const magnitude = Math.pow(10, Math.floor(Math.log10(maxValue)));
+  const normalized = maxValue / magnitude;
+  
+  if (normalized <= 2) return magnitude / 2;
+  if (normalized <= 5) return magnitude;
+  return 2 * magnitude;
+}
+
+// Использование:
+yAxis: [
+  {
+    ...w.yAxis,
+    type: 'value',
+    name: 'Категория 1',
+    nameLocation: 'middle',
+    nameGap: 45,
+    min: 0,
+    max: maxLeftAxis,
+    interval: getNiceInterval(maxLeftAxis)
+  },
+  // ... аналогично для правой оси
+]
+
+
+
+
+
 const categories = w.xAxis.data;
 
 const CATEGORY_NAMES = [
