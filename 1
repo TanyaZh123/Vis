@@ -1,237 +1,68 @@
-// Рассчитываем максимумы для осей
-let maxLeft = 0, maxRight = 0;
+const positiveData = w.series[0]?.data || [];
+const negativeData = w.series[1]?.data || [];
 
-for (let group = 0; group < GROUP_COUNT; group++) {
-  const isRight = group > 0;
-  
-  for (let i = 0; i < categories.length; i++) {
-    const plan = w.series[group * 2]?.data[i]?.value || 0;
-    const fact = w.series[group * 2 + 1]?.data[i]?.value || 0;
-    const maxVal = Math.max(plan, fact);
-    
-    if (isRight) maxRight = Math.max(maxRight, maxVal);
-    else maxLeft = Math.max(maxLeft, maxVal);
-  }
-}
+// Вычисляем границы для оси Y
+const maxPositive = Math.max(...positiveData);
+const maxNegative = Math.max(...negativeData);
+const maxValue = Math.max(maxPositive, maxNegative);
 
-// Округляем с запасом 10%
-maxLeft = Math.ceil(maxLeft * 1.1);
-maxRight = Math.ceil(maxRight * 1.1);
-
-ColumnChartRender({
-  // ... другие параметры
-  yAxis: [
-    {
-      ...w.yAxis,
-      type: 'value',
-      name: 'Категория 1',
-      nameLocation: 'middle',
-      nameGap: 45,
-      min: 0,
-      max: maxLeft
-    },
-    {
-      ...w.yAxis,
-      type: 'value',
-      name: 'Категория 2–3',
-      position: 'right',
-      nameLocation: 'middle',
-      nameGap: 45,
-      min: 0,
-      max: maxRight
-    }
-  ],
-  // ... другие параметры
-});
-
-
-
-
-const categories = w.xAxis.data;
-
-const CATEGORY_NAMES = [
-  'Категория 1',
-  'Категория 2',
-  'Категория 3'
-];
-
-const CATEGORY_COLORS = [
-  '#3b82f6',
-  '#10b981',
-  '#f59e0b'
-];
-
-const GROUP_COUNT = 3;
-const BAR_WIDTH = 14;
-
-const resultSeries = [];
-
-for (let group = 0; group < GROUP_COUNT; group++) {
-  const isRightAxis = group > 0;
-
-  resultSeries.push({
-    name: CATEGORY_NAMES[group],
-    type: 'custom',
-    yAxisIndex: isRightAxis ? 1 : 0,
-    encode: { x: 0, y: 1 },
-
-    renderItem: function (params, api) {
-      const monthIndex = api.value(0);
-      const plan = api.value(1);
-      const fact =
-        w.series[group * 2 + 1]?.data[monthIndex]?.value || 0;
-
-      const percent =
-        plan > 0 ? Math.round((fact / plan) * 100) : 0;
-
-      const baseX = api.coord([monthIndex, 0])[0];
-      const groupOffset =
-        (group - (GROUP_COUNT - 1) / 2) * BAR_WIDTH * 1.6;
-      const x = baseX + groupOffset - BAR_WIDTH / 2;
-
-      const yZero = api.coord([monthIndex, 0])[1];
-      const yPlan = api.coord([monthIndex, plan])[1];
-      const yFact = api.coord([monthIndex, fact])[1];
-
-      const isOver = fact > plan;
-
-      const children = [
-        // ПЛАН (рамка)
-        {
-          type: 'rect',
-          shape: {
-            x,
-            y: yPlan,
-            width: BAR_WIDTH,
-            height: yZero - yPlan
-          },
-          style: {
-            fill: 'rgba(203,213,225,0.25)',
-            stroke: CATEGORY_COLORS[group],
-            lineWidth: 1
-          }
-        },
-
-        // ФАКТ
-        {
-          type: 'rect',
-          shape: isOver
-            ? {
-                x,
-                y: yFact,
-                width: BAR_WIDTH,
-                height: yZero - yFact
-              }
-            : {
-                x,
-                y: yZero - (yZero - yPlan) * (fact / plan),
-                width: BAR_WIDTH,
-                height: (yZero - yPlan) * (fact / plan)
-              },
-          style: {
-            fill: CATEGORY_COLORS[group],
-            opacity: isOver ? 0.55 : 0.9
-          }
-        }
-      ];
-
-      // ЛИНИЯ ПЛАНА, ЕСЛИ ФАКТ ПРЕВЫСИЛ
-      if (isOver) {
-        children.push({
-          type: 'line',
-          shape: {
-            x1: x - 2,
-            y1: yPlan,
-            x2: x + BAR_WIDTH + 2,
-            y2: yPlan
-          },
-          style: {
-            stroke: CATEGORY_COLORS[group],
-            lineWidth: 2,
-            lineDash: [4, 4]
-          }
-        });
-      }
-
-      // % НАД МАКСИМУМОМ
-      children.push({
-        type: 'text',
-        style: {
-          text: percent + '%',
-          x: x + BAR_WIDTH / 2,
-          y: Math.min(yPlan, yFact) - 8,
-          fill: CATEGORY_COLORS[group],
-          align: 'center',
-          verticalAlign: 'bottom',
-          font: 'bold 11px sans-serif'
-        }
-      });
-
-      return {
-        type: 'group',
-        children
-      };
-    },
-
-    data: categories.map((_, monthIndex) => {
-      const plan =
-        w.series[group * 2]?.data[monthIndex]?.value || 0;
-      return [monthIndex, plan];
-    }),
-
-    tooltip: {
-      formatter: (params) => {
-        const idx = params.value[0];
-        const plan = params.value[1];
-        const fact =
-          w.series[group * 2 + 1]?.data[idx]?.value || 0;
-        const percent =
-          plan > 0 ? Math.round((fact / plan) * 100) : 0;
-
-        return `
-          <b>${categories[idx]}</b><br/>
-          ${CATEGORY_NAMES[group]}<br/>
-          План: ${plan}<br/>
-          Факт: ${fact}<br/>
-          Выполнение: ${percent}%
-        `;
-      }
-    }
-  });
-}
-
-ColumnChartRender({
+const config = {
   general: w.general,
-
-  xAxis: {
-    ...w.xAxis,
-    type: 'category',
-    name: 'Месяцы',
-    nameLocation: 'middle',
-    nameGap: 30,
-    data: categories
-  },
-
-  yAxis: [
-    {
-      ...w.yAxis,
-      type: 'value',
-      name: 'Категория 1',
-      nameLocation: 'middle',
-      nameGap: 45
-    },
-    {
-      ...w.yAxis,
-      type: 'value',
-      name: 'Категория 2–3',
-      position: 'right',
-      nameLocation: 'middle',
-      nameGap: 45
+  xAxis: w.xAxis,
+  yAxis: {
+    ...w.yAxis,
+    type: 'value',
+    min: -maxValue * 1.2, // ноль посередине
+    max: maxValue * 1.2,
+    axisLabel: {
+      ...w.yAxis?.axisLabel,
+      formatter: function(value) {
+        // Показываем абсолютные значения
+        return Math.abs(Math.round(value));
+      }
     }
-  ],
-
-  series: resultSeries,
+  },
+  series: w.series.flatMap((series, index) => {
+    if (index === 1) {
+      // Серия вниз
+      return [{
+        ...series,
+        type: 'bar',
+        data: series.data.map(value => -value), // инвертируем
+        label: {
+          ...series.label,
+          show: series.label?.show !== false,
+          position: 'bottom',
+          formatter: function(params) {
+            return Math.abs(params.value);
+          }
+        }
+      }];
+    }
+    // Серия вверх
+    return [{
+      ...series,
+      type: 'bar',
+      label: {
+        ...series.label,
+        position: 'top'
+      }
+    }];
+  }),
   legend: w.legend,
-  tooltip: { trigger: 'item' },
-  grid: w.grid
-});
+  tooltip: {
+    ...w.tooltip,
+    formatter: function(params) {
+      // Кастомный тултип с абсолютными значениями
+      let result = params[0].name || '';
+      params.forEach(item => {
+        const value = Math.abs(item.value);
+        const sign = item.value >= 0 ? '↑' : '↓';
+        result += `<br/>${item.marker} ${item.seriesName}: ${sign} ${value}`;
+      });
+      return result;
+    }
+  }
+};
+
+ColumnChartRender(config);
