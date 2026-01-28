@@ -125,3 +125,119 @@ ColumnChartRender({
     grid: w.grid,
     dataZoom: w.dataZoom
 });
+
+
+
+
+
+
+
+const planSeries = w.series[0];
+const factSeries = w.series[1];
+
+const factInPlanData = [];
+const overfillData = [];
+const vacancyData = [];
+
+planSeries.data.forEach((d, i) => {
+  const plan = Math.abs(d.value);
+  const fact = Math.abs(factSeries.data[i].value);
+
+  const factInPlan = Math.min(fact, plan);
+  const overfill = Math.max(fact - plan, 0);
+  const vacancy = Math.max(plan - fact, 0);
+
+  factInPlanData.push({ ...d, value: factInPlan });
+  overfillData.push({ ...d, value: overfill });
+  vacancyData.push({ ...d, value: vacancy });
+});
+
+
+const completionPercent = planSeries.data.map((d, i) => {
+  const plan = Math.abs(d.value);
+  const fact = Math.abs(factSeries.data[i].value);
+  return plan === 0 ? 0 : Math.round((fact / plan) * 100);
+});
+
+w.series = [
+
+  // ПЛАН — ФОН
+  {
+    ...planSeries,
+    name: 'План',
+    barGap: '-100%',
+    data: planSeries.data,
+    itemStyle: { color: '#ECEFF1' },
+    emphasis: { disabled: true },
+    z: 1
+  },
+
+  // ФАКТ — ЗАЛИВКА
+  {
+    ...factSeries,
+    name: 'Факт',
+    data: factInPlanData,
+    itemStyle: { color: '#78909C' },
+    z: 2,
+
+    label: {
+      show: true,
+      position: 'top',
+      formatter: (p) => {
+        const percent = completionPercent[p.dataIndex];
+        const vac = vacancyData[p.dataIndex].value;
+
+        if (percent >= 100) {
+          return ✔️ ${percent}%;
+        }
+
+        return 🧍 ${percent}% | Вак: ${vac};
+      },
+      color: '#455A64',
+      fontSize: 11,
+      fontWeight: 'bold'
+    }
+  }
+
+];
+
+
+
+w.tooltip = {
+  trigger: 'axis',
+  formatter: function (params) {
+    let fact = 0;
+    let over = 0;
+    let vacancy = 0;
+
+    params.forEach(p => {
+      if (p.seriesName === 'Факт') fact += p.value;
+      if (p.seriesName === 'Перевыполнение') over += p.value;
+      if (p.seriesName === 'Вакансии') vacancy += p.value;
+    });
+
+    const plan = fact + vacancy;
+    const realFact = fact + over;
+    const fill = plan ? Math.round(realFact / plan * 100) : 0;
+
+    return `
+      ${params[0].axisValue}<br/>
+      План: <b>${plan}</b><br/>
+      Факт: <b>${realFact}</b><br/>
+      Вакансии: <b>${vacancy}</b><br/>
+      Перевыполнение: <b>+${over}</b><br/>
+      🟦 Укомплектованность: <b>${fill}%</b>
+    `;
+  }
+};
+
+ColumnChartRender({
+    general: w.general,
+    xAxis: w.xAxis,
+    yAxis: w.yAxis,
+    series: w.series,
+    legend: w.legend,
+    tooltip: w.tooltip,
+    grid: w.grid,
+    dataZoom: w.dataZoom
+});
