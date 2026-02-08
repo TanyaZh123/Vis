@@ -1,0 +1,116 @@
+const items = w.data.primaryData.items;
+
+window.val1 = items.map(i => i.values[1]);
+window.val2 = items.map(i => i.values[2]);
+
+console.log(val1, val2)
+
+
+---------------------------------------------------------------
+
+
+const years = w.xAxis.data || [];
+const metric1 = val1;
+const metric2 = val2;
+
+w.grid = {
+    ...(w.grid || {}),
+    bottom: 120,
+    containLabel: true
+};
+
+if (!Array.isArray(w.xAxis)) {
+    w.xAxis = [w.xAxis];
+}
+
+// вторая строка (Показатель 1)
+w.xAxis.push({
+    type: 'category',
+    position: 'bottom',
+    offset: 24,
+    data: metric1,
+    axisTick: { show: false },
+    axisLine: { show: false },
+    axisLabel: {
+        show: true,
+        fontSize: 11,
+        color: '#495057'
+    },
+    animation: false
+});
+
+// третья строка (Показатель 2)
+w.xAxis.push({
+    type: 'category',
+    position: 'bottom',
+    offset: 48,
+    data: metric2,
+    axisTick: { show: false },
+    axisLine: { show: false },
+    axisLabel: {
+        show: true,
+        fontSize: 11,
+        color: '#868e96'
+    },
+    animation: false
+});
+
+
+const AXIS_LABEL_FONT_SIZE = 11;
+const TEXT_ALIGN_FIX = Math.round(AXIS_LABEL_FONT_SIZE / 2);
+
+
+w.graphic = [
+    ...(w.graphic || []),
+
+    {
+        type: 'text',
+        left: 10,
+        bottom: 48 + TEXT_ALIGN_FIX,
+        silent: true,
+        style: {
+            text: 'Дни работы',
+            fill: '#000',
+            font: '12px Open Sans',
+            align: 'left',
+            verticalAlign: 'middle'
+        }
+    },
+
+    {
+        type: 'text',
+        left: 10,
+        bottom: 24 + TEXT_ALIGN_FIX,
+        silent: true,
+        style: {
+            text: 'Показатель 2',
+            fill: '#000',
+            font: '12px Open Sans',
+            align: 'left',
+            verticalAlign: 'middle'
+        }
+    }
+];
+
+
+if (Array.isArray(w.series)) {
+    w.series = w.series.map(s => ({
+        ...s,
+        xAxisIndex: 0
+    }));
+}
+
+ChartRender({
+    general: w.general,
+    xAxis: w.xAxis,
+    yAxis: w.yAxis,
+    series: w.series,
+    legend: w.legend,
+    tooltip: w.tooltip,
+    grid: w.grid,
+    dataZoom: w.dataZoom,
+    graphic: w.graphic 
+});
+
+
+console.log(w)
