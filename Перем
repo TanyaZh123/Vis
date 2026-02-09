@@ -1,0 +1,281 @@
+// Предположим, что у вас уже есть два виджета таблиц на странице с GUID:
+// Например: <div id="factTableGuid">...</div> и <div id="planTableGuid">...</div>
+
+// Создаем виджет с кнопками переключения
+function createSwitchableWidget(factWidgetId, planWidgetId) {
+    // Получаем существующие виджеты
+    const factWidget = document.getElementById(factWidgetId);
+    const planWidget = document.getElementById(planWidgetId);
+    
+    if (!factWidget || !planWidget) {
+        console.error('Один или оба виджета не найдены!');
+        return null;
+    }
+    
+    // Создаем контейнер для виджета
+    const container = document.createElement('div');
+    container.className = 'switchable-widget';
+    container.style.border = '1px solid #ddd';
+    container.style.borderRadius = '8px';
+    container.style.padding = '20px';
+    container.style.margin = '20px 0';
+    container.style.maxWidth = '100%';
+    
+    // Создаем кнопки
+    const buttonGroup = document.createElement('div');
+    buttonGroup.className = 'button-group';
+    buttonGroup.style.marginBottom = '20px';
+    buttonGroup.style.display = 'flex';
+    buttonGroup.style.gap = '10px';
+    
+    const factBtn = document.createElement('button');
+    factBtn.id = 'switchToFactBtn';
+    factBtn.className = 'tab-btn active';
+    factBtn.textContent = 'Факт';
+    factBtn.style.padding = '10px 20px';
+    factBtn.style.border = 'none';
+    factBtn.style.borderRadius = '4px';
+    factBtn.style.cursor = 'pointer';
+    factBtn.style.backgroundColor = '#007bff';
+    factBtn.style.color = 'white';
+    factBtn.style.fontSize = '16px';
+    
+    const planBtn = document.createElement('button');
+    planBtn.id = 'switchToPlanBtn';
+    planBtn.className = 'tab-btn';
+    planBtn.textContent = 'План';
+    planBtn.style.padding = '10px 20px';
+    planBtn.style.border = 'none';
+    planBtn.style.borderRadius = '4px';
+    planBtn.style.cursor = 'pointer';
+    planBtn.style.backgroundColor = '#f0f0f0';
+    planBtn.style.color = '#333';
+    planBtn.style.fontSize = '16px';
+    
+    buttonGroup.appendChild(factBtn);
+    buttonGroup.appendChild(planBtn);
+    
+    // Создаем контейнер для контента
+    const contentContainer = document.createElement('div');
+    contentContainer.className = 'widget-content';
+    contentContainer.style.position = 'relative';
+    
+    // Клонируем виджеты (или перемещаем их)
+    const factWidgetClone = factWidget.cloneNode(true);
+    const planWidgetClone = planWidget.cloneNode(true);
+    
+    // Скрываем оригинальные виджеты
+    factWidget.style.display = 'none';
+    planWidget.style.display = 'none';
+    
+    // Настраиваем отображение клонов
+    factWidgetClone.style.display = 'block';
+    planWidgetClone.style.display = 'none';
+    
+    // Добавляем клоны в контейнер
+    contentContainer.appendChild(factWidgetClone);
+    contentContainer.appendChild(planWidgetClone);
+    
+    // Собираем виджет
+    container.appendChild(buttonGroup);
+    container.appendChild(contentContainer);
+    
+    // Функции для переключения
+    function switchToFact() {
+        factWidgetClone.style.display = 'block';
+        planWidgetClone.style.display = 'none';
+        
+        factBtn.style.backgroundColor = '#007bff';
+        factBtn.style.color = 'white';
+        
+        planBtn.style.backgroundColor = '#f0f0f0';
+        planBtn.style.color = '#333';
+    }
+    
+    function switchToPlan() {
+        factWidgetClone.style.display = 'none';
+        planWidgetClone.style.display = 'block';
+        
+        factBtn.style.backgroundColor = '#f0f0f0';
+        factBtn.style.color = '#333';
+        
+        planBtn.style.backgroundColor = '#007bff';
+        planBtn.style.color = 'white';
+    }
+    
+    // Добавляем обработчики событий
+    factBtn.addEventListener('click', switchToFact);
+    planBtn.addEventListener('click', switchToPlan);
+    
+    return container;
+}
+
+// Альтернативный вариант - если нужно переместить существующие виджеты, а не клонировать
+function createSwitchableWidgetMove(factWidgetId, planWidgetId, targetContainerId = null) {
+    const factWidget = document.getElementById(factWidgetId);
+    const planWidget = document.getElementById(planWidgetId);
+    
+    if (!factWidget || !planWidget) {
+        console.error('Один или оба виджета не найдены!');
+        return null;
+    }
+    
+    // Создаем контейнер
+    const container = document.createElement('div');
+    container.className = 'switchable-widget-container';
+    
+    // Стили контейнера
+    Object.assign(container.style, {
+        border: '1px solid #ddd',
+        borderRadius: '8px',
+        padding: '20px',
+        margin: '20px 0',
+        maxWidth: '100%',
+        backgroundColor: '#fff'
+    });
+    
+    // Создаем кнопки
+    const buttonGroup = document.createElement('div');
+    Object.assign(buttonGroup.style, {
+        display: 'flex',
+        gap: '10px',
+        marginBottom: '20px',
+        flexWrap: 'wrap'
+    });
+    
+    const buttons = [
+        { id: 'btnFact', text: 'Факт', active: true },
+        { id: 'btnPlan', text: 'План', active: false }
+    ];
+    
+    const buttonElements = [];
+    
+    buttons.forEach(btn => {
+        const button = document.createElement('button');
+        button.id = btn.id;
+        button.textContent = btn.text;
+        button.type = 'button';
+        
+        Object.assign(button.style, {
+            padding: '10px 20px',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            fontWeight: '500',
+            transition: 'all 0.3s ease'
+        });
+        
+        if (btn.active) {
+            Object.assign(button.style, {
+                backgroundColor: '#007bff',
+                color: 'white'
+            });
+        } else {
+            Object.assign(button.style, {
+                backgroundColor: '#f5f5f5',
+                color: '#333'
+            });
+        }
+        
+        buttonGroup.appendChild(button);
+        buttonElements.push(button);
+    });
+    
+    // Контейнер для контента
+    const contentContainer = document.createElement('div');
+    contentContainer.className = 'widget-content-container';
+    
+    // Переносим виджеты в контейнер
+    // Сохраняем оригинальные стили для восстановления
+    const originalFactStyles = factWidget.style.cssText;
+    const originalPlanStyles = planWidget.style.cssText;
+    
+    // Настраиваем отображение
+    Object.assign(factWidget.style, {
+        display: 'block',
+        width: '100%'
+    });
+    
+    Object.assign(planWidget.style, {
+        display: 'none',
+        width: '100%'
+    });
+    
+    // Перемещаем виджеты
+    contentContainer.appendChild(factWidget);
+    contentContainer.appendChild(planWidget);
+    
+    // Собираем виджет
+    container.appendChild(buttonGroup);
+    container.appendChild(contentContainer);
+    
+    // Добавляем на страницу
+    if (targetContainerId) {
+        const target = document.getElementById(targetContainerId);
+        if (target) {
+            target.appendChild(container);
+        } else {
+            document.body.appendChild(container);
+        }
+    } else {
+        document.body.appendChild(container);
+    }
+    
+    // Функции переключения
+    const [factBtn, planBtn] = buttonElements;
+    
+    factBtn.addEventListener('click', () => {
+        factWidget.style.display = 'block';
+        planWidget.style.display = 'none';
+        
+        factBtn.style.backgroundColor = '#007bff';
+        factBtn.style.color = 'white';
+        
+        planBtn.style.backgroundColor = '#f5f5f5';
+        planBtn.style.color = '#333';
+    });
+    
+    planBtn.addEventListener('click', () => {
+        factWidget.style.display = 'none';
+        planWidget.style.display = 'block';
+        
+        factBtn.style.backgroundColor = '#f5f5f5';
+        factBtn.style.color = '#333';
+        
+        planBtn.style.backgroundColor = '#007bff';
+        planBtn.style.color = 'white';
+    });
+    
+    // Возвращаем методы управления
+    return {
+        container: container,
+        switchToFact: () => factBtn.click(),
+        switchToPlan: () => planBtn.click(),
+        destroy: function() {
+            // Возвращаем виджеты на исходные места (упрощенно)
+            // В реальном коде нужно запомнить оригинальные позиции
+            container.remove();
+            // Восстанавливаем оригинальные стили
+            factWidget.style.cssText = originalFactStyles;
+            planWidget.style.cssText = originalPlanStyles;
+        }
+    };
+}
+
+// Инициализация виджета после загрузки DOM
+document.addEventListener('DOMContentLoaded', function() {
+    // Пример использования: 
+    // Предположим, у вас есть виджеты с ID 'factTable' и 'planTable'
+    
+    // Вариант 1: Создать виджет и вставить куда нужно
+    const widget = createSwitchableWidget('factTableGuid', 'planTableGuid');
+    if (widget) {
+        // Вставляем виджет в нужное место, например, в контейнер с id='mainContainer'
+        const mainContainer = document.getElementById('mainContainer') || document.body;
+        mainContainer.appendChild(widget);
+    }
+    
+    // ИЛИ Вариант 2: Создать и автоматически разместить
+    // createSwitchableWidgetMove('factTableGuid', 'planTableGuid', 'targetContainerId');
+});
