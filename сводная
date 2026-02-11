@@ -1,3 +1,36 @@
+const groupRow = document.createElement('tr');
+groupRow.style.background = '#f6f6f6';
+groupRow.style.cursor = 'pointer';
+
+// первая ячейка — название группы
+const gCell = document.createElement('td');
+gCell.style.padding = '8px';
+gCell.style.fontWeight = '600';
+gCell.textContent = `▼ ${lvl1}`;
+groupRow.appendChild(gCell);
+
+// теперь добавляем ячейки по колонкам
+columns.forEach(col => {
+    const td = document.createElement('td');
+    td.style.padding = '8px';
+    td.style.textAlign = 'right';
+
+    // если это группа "Период цикла" — заполняем
+    if (lvl1 === "Период цикла") {
+        const start = lvl2Map["Начало периода"]?.[col] ?? "";
+        const end   = lvl2Map["Конец периода"]?.[col] ?? "";
+
+        td.textContent = (start && end) ? `${start} — ${end}` : "";
+    }
+
+    groupRow.appendChild(td);
+});
+
+tbody.appendChild(groupRow);
+
+
+
+
 function normalizeData(items) {
     const columnsSet = new Set();
     const tree = {};
