@@ -10,12 +10,12 @@ function normalizeData(items) {
 
         const start = item.values?.[0];
         const end   = item.values?.[1];
-        const value = item.values?.[2];
+        let   value = item.values?.[2];
 
         if (!col) return;
         columnsSet.add(col);
 
-        // первая строка — период цикла
+        // первая строка — период цикла (если она вообще нужна)
         if (!lvl1 && !lvl2 && start != null && end != null) {
             periodRow = { col, start, end };
             return;
@@ -23,29 +23,35 @@ function normalizeData(items) {
 
         if (!lvl1 || !lvl2) return;
 
+        // для этих строк берём не values[2], а keys[3]
+        if (
+            lvl2 === 'Начало периода' ||
+            lvl2 === 'Конец периода' ||
+            lvl2 === 'Продолжительность цикла'
+        ) {
+            value = item.keys?.[3];
+        }
+
         if (!tree[lvl1]) tree[lvl1] = {};
         if (!tree[lvl1][lvl2]) tree[lvl1][lvl2] = {};
         tree[lvl1][lvl2][col] = value;
     });
 
-    /* --- ДОБАВЛЯЕМ ОБРАБОТКУ "Расход" + "Расход Макс." --- */
+    /* --- объединение "Расход" + "Расход Макс." как раньше, если нужно --- */
     Object.entries(tree).forEach(([lvl1, lvl2Map]) => {
-        const hasRashod = lvl2Map["Расход"];
-        const hasRashodMax = lvl2Map["Расход Макс."];
+        const base = lvl2Map["Расход"];
+        const max  = lvl2Map["Расход Макс."];
 
-        if (hasRashod && hasRashodMax) {
-            // дописываем макс в скобках
-            Object.keys(hasRashod).forEach(col => {
-                const base = hasRashod[col] ?? "";
-                const max  = hasRashodMax[col] ?? "";
+        if (base && max) {
+            Object.keys(base).forEach(col => {
+                const v = base[col] ?? "";
+                const m = max[col] ?? "";
 
-                if (max !== "") {
-                    hasRashod[col] = `${base} (${max})`;
+                if (m !== "") {
+                    base[col] = `${v} (${m})`;
                 }
             });
-
-            // удаляем строку "Расход Макс."
-            delete tree[lvl1]["Расход Макс."];
+            delete lvl2Map["Расход Макс."];
         }
     });
 
