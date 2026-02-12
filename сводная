@@ -1,3 +1,184 @@
+function normalizeData(items) {
+    const lvl0Set = new Set(); // keys[0]
+    const lvl1Set = new Set(); // keys[1]
+    const tree = {};           // lvl2 → lvl0 → lvl1 → value
+    let periodRow = null;
+
+    items.forEach(item => {
+        const col  = item.keys?.[0]; // lvl0
+        const lvl1 = item.keys?.[1]; // lvl1
+        const lvl2 = item.keys?.[2]; // lvl2
+
+        const start = item.values?.[0];
+        const end   = item.values?.[1];
+        const value = item.values?.[2];
+
+        if (!col) return;
+        lvl0Set.add(col);
+
+        if (lvl1) lvl1Set.add(lvl1);
+
+        // период
+        if (!lvl1 && !lvl2 && start != null && end != null) {
+            periodRow = { col, start, end };
+            return;
+        }
+
+        if (!lvl1 || !lvl2) return;
+
+        if (!tree[lvl2]) tree[lvl2] = {};
+        if (!tree[lvl2][col]) tree[lvl2][col] = {};
+        tree[lvl2][col][lvl1] = value;
+    });
+
+    return {
+        lvl0: Array.from(lvl0Set),
+        lvl1: Array.from(lvl1Set),
+        tree,
+        periodRow
+    };
+}
+
+(function renderUserPivot(w) {
+    const container = document.getElementById(w.general.renderTo);
+    container.innerHTML = '';
+
+    const wrapper = document.createElement('div');
+    wrapper.style.width = '100%';
+    wrapper.style.height = '100%';
+    wrapper.style.overflow = 'auto';
+    wrapper.style.position = 'relative';
+    container.appendChild(wrapper);
+
+    const items = w.data?.primaryData?.items || [];
+    if (!items.length) {
+        wrapper.textContent = 'Нет данных';
+        return;
+    }
+
+    const { lvl0, lvl1, tree, periodRow } = normalizeData(items);
+
+    const periodStart = items[0]?.values?.[0];
+    const periodEnd   = items[0]?.values?.[1];
+
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    table.style.tableLayout = 'fixed';
+    table.style.fontSize = '13px';
+    table.style.fontFamily = 'Inter, Arial, sans-serif';
+
+    wrapper.appendChild(table);
+
+    /* ---------- HEADER ---------- */
+    const thead = document.createElement('thead');
+
+    // --- row 1: lvl0 ---
+    const row1 = document.createElement('tr');
+    const empty1 = document.createElement('th');
+    empty1.style.background = '#fff';
+    empty1.style.position = 'sticky';
+    empty1.style.top = '0';
+    empty1.style.zIndex = '3';
+    row1.appendChild(empty1);
+
+    lvl0.forEach(col => {
+        const th = document.createElement('th');
+        th.textContent = col;
+        th.colSpan = lvl1.length;
+        th.style.textAlign = 'center';
+        th.style.padding = '8px';
+        th.style.position = 'sticky';
+        th.style.top = '0';
+        th.style.background = '#fff';
+        th.style.borderBottom = '1px solid #ddd';
+        th.style.zIndex = '3';
+        row1.appendChild(th);
+    });
+
+    // --- row 2: lvl1 ---
+    const row2 = document.createElement('tr');
+    const empty2 = document.createElement('th');
+    empty2.style.background = '#fff';
+    empty2.style.position = 'sticky';
+    empty2.style.top = '32px';
+    empty2.style.zIndex = '3';
+    row2.appendChild(empty2);
+
+    lvl0.forEach(() => {
+        lvl1.forEach(l1 => {
+            const th = document.createElement('th');
+            th.textContent = l1;
+            th.style.textAlign = 'right';
+            th.style.padding = '8px';
+            th.style.position = 'sticky';
+            th.style.top = '32px';
+            th.style.background = '#fff';
+            th.style.borderBottom = '1px solid #ddd';
+            th.style.zIndex = '3';
+            row2.appendChild(th);
+        });
+    });
+
+    thead.appendChild(row1);
+    thead.appendChild(row2);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+
+    /* ---------- PERIOD ROW ---------- */
+    const periodTr = document.createElement('tr');
+    periodTr.style.background = '#eef3ff';
+
+    const labelTd = document.createElement('td');
+    labelTd.textContent = 'Период цикла';
+    labelTd.style.padding = '8px';
+    labelTd.style.fontWeight = '600';
+    periodTr.appendChild(labelTd);
+
+    lvl0.forEach(() => {
+        lvl1.forEach(() => {
+            const td = document.createElement('td');
+            td.style.padding = '8px';
+            td.style.textAlign = 'right';
+            td.textContent =
+                periodStart != null && periodEnd != null
+                    ? `${periodStart} — ${periodEnd}`
+                    : '';
+            periodTr.appendChild(td);
+        });
+    });
+
+    tbody.appendChild(periodTr);
+
+    /* ---------- MAIN DATA (lvl2 rows) ---------- */
+    Object.entries(tree).forEach(([lvl2, colMap]) => {
+        const tr = document.createElement('tr');
+
+        const nameTd = document.createElement('td');
+        nameTd.textContent = lvl2;
+        nameTd.style.padding = '8px';
+        tr.appendChild(nameTd);
+
+        lvl0.forEach(col => {
+            lvl1.forEach(l1 => {
+                const td = document.createElement('td');
+                td.textContent = colMap[col]?.[l1] ?? '';
+                td.style.padding = '8px';
+                td.style.textAlign = 'right';
+                tr.appendChild(td);
+            });
+        });
+
+        tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+})(w);
+
+
+
+
 const thead = document.createElement('thead');
 
 // --- row 1: lvl0 ---
