@@ -6,7 +6,7 @@ container.style.height = '100%';
 // данные
 const items = w.data.primaryData.items || [];
 
-// --- создаем таблицу ---
+// ---------- TABLE ----------
 const table = document.createElement('table');
 table.style.borderCollapse = 'collapse';
 table.style.width = '100%';
@@ -16,25 +16,20 @@ table.style.fontSize = '13px';
 container.appendChild(table);
 
 // ================= HEADER =================
-
 const thead = document.createElement('thead');
 table.appendChild(thead);
 
-// --- первая строка заголовка ---
+// строка 1
 const headerRow1 = document.createElement('tr');
-
 headerRow1.innerHTML = `
-    <th rowspan="2">Уровень 1</th>
-    <th rowspan="2">Уровень 2</th>
+    <th rowspan="2">Показатель</th>
     <th colspan="3">Месяц</th>
     <th colspan="3">Год</th>
 `;
-
 thead.appendChild(headerRow1);
 
-// --- вторая строка заголовка ---
+// строка 2
 const headerRow2 = document.createElement('tr');
-
 headerRow2.innerHTML = `
     <th>БП</th>
     <th>Факт</th>
@@ -43,75 +38,81 @@ headerRow2.innerHTML = `
     <th>Факт</th>
     <th>Δ</th>
 `;
-
 thead.appendChild(headerRow2);
 
-// стили header
+// --- sticky header ---
 Array.from(thead.querySelectorAll('th')).forEach(th => {
     th.style.border = '1px solid #dee2e6';
     th.style.padding = '6px';
     th.style.background = '#f1f3f5';
     th.style.position = 'sticky';
-    th.style.top = '0';
-    th.style.zIndex = '2';
+    th.style.zIndex = '3';
 });
 
-// ================= BODY =================
+// первая строка top = 0
+Array.from(headerRow1.children).forEach(th => {
+    th.style.top = '0px';
+});
 
+// вторая строка top = высота первой
+requestAnimationFrame(() => {
+    const h = headerRow1.getBoundingClientRect().height;
+    Array.from(headerRow2.children).forEach(th => {
+        th.style.top = h + 'px';
+    });
+});
+
+
+// ================= BODY =================
 const tbody = document.createElement('tbody');
 table.appendChild(tbody);
 
-// группируем по 1 уровню
+// группировка по 1 уровню
 const grouped = {};
 
 items.forEach(item => {
-    const v = item.values;
-
-    const level1 = v[0];
-    const level2 = v[1];
-
+    const level1 = item.keys[0];
     if (!grouped[level1]) grouped[level1] = [];
-    grouped[level1].push(v);
+    grouped[level1].push(item);
 });
 
-// рендер строк
 Object.keys(grouped).forEach(level1 => {
 
-    // --- строка первого уровня ---
-    const trLevel1 = document.createElement('tr');
-    trLevel1.style.cursor = 'pointer';
-    trLevel1.style.background = '#f8f9fa';
+    // ---- строка первого уровня ----
+    const tr1 = document.createElement('tr');
+    tr1.style.cursor = 'pointer';
+    tr1.style.background = '#f8f9fa';
 
-    trLevel1.innerHTML = `
-        <td>${level1}</td>
-        <td></td>
-        <td colspan="6"></td>
-    `;
+    const td1 = document.createElement('td');
+    td1.textContent = level1;
+    td1.style.fontWeight = '600';
+    td1.colSpan = 7;
 
-    tbody.appendChild(trLevel1);
+    tr1.appendChild(td1);
+    tbody.appendChild(tr1);
 
-    // --- строки второго уровня ---
-    grouped[level1].forEach(v => {
+    // ---- второй уровень ----
+    grouped[level1].forEach(item => {
 
-        const trLevel2 = document.createElement('tr');
-        trLevel2.style.display = 'none';
+        const tr2 = document.createElement('tr');
+        tr2.style.display = 'none';
 
-        trLevel2.innerHTML = `
-            <td></td>
-            <td>${v[1]}</td>
-            <td>${v[2]}</td>
-            <td>${v[3]}</td>
-            <td>${v[4]}</td>
-            <td>${v[5]}</td>
-            <td>${v[6]}</td>
-            <td>${v[7]}</td>
-        `;
+        const nameCell = document.createElement('td');
+        nameCell.textContent = '   ' + (item.keys[1] || '');
+        tr2.appendChild(nameCell);
 
-        tbody.appendChild(trLevel2);
+        item.values.forEach(val => {
+            const td = document.createElement('td');
+            td.textContent = val ?? '';
+            tr2.appendChild(td);
+        });
 
-        trLevel1.addEventListener('click', () => {
-            trLevel2.style.display =
-                trLevel2.style.display === 'none' ? '' : 'none';
+        tbody.appendChild(tr2);
+
+        // раскрытие
+        tr1.addEventListener('click', () => {
+            tr2.style.display =
+                tr2.style.display === 'none' ? '' : 'none';
         });
     });
 });
