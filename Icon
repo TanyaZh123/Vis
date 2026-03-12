@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+<g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+
+<!-- crown valve -->
+<circle cx="64" cy="12" r="8"/>
+<line x1="64" y1="20" x2="64" y2="30"/>
+
+<!-- upper valve body -->
+<rect x="54" y="30" width="20" height="10" rx="2"/>
+
+<!-- cross -->
+<line x1="18" y1="40" x2="110" y2="40"/>
+<rect x="58" y="40" width="12" height="14"/>
+
+<!-- wing valves -->
+<circle cx="18" cy="40" r="6"/>
+<circle cx="110" cy="40" r="6"/>
+
+<!-- valve handles -->
+<line x1="18" y1="26" x2="18" y2="54"/>
+<line x1="110" y1="26" x2="110" y2="54"/>
+
+<!-- master valve -->
+<rect x="52" y="54" width="24" height="12" rx="2"/>
+
+<!-- second cross -->
+<line x1="34" y1="66" x2="94" y2="66"/>
+
+<!-- lower wing valves -->
+<circle cx="34" cy="66" r="5"/>
+<circle cx="94" cy="66" r="5"/>
+
+<!-- tubing -->
+<rect x="58" y="66" width="12" height="26"/>
+
+<!-- flange -->
+<rect x="50" y="92" width="28" height="8"/>
+
+<!-- wellhead base -->
+<rect x="44" y="100" width="40" height="12" rx="2"/>
+
+</g>
+</svg>
