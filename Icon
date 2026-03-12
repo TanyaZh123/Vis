@@ -1,21 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 110">
-<g stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none">
-
-<!-- верхний клапан -->
-<circle cx="48" cy="12" r="7"/>
+<g stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
 
 <!-- центральная труба -->
-<rect x="42" y="19" width="12" height="36" fill="currentColor" stroke="none"/>
+<rect x="42" y="28" width="12" height="32" fill="currentColor" stroke="none"/>
+
+<!-- верхняя крутилка -->
+<circle cx="48" cy="12" r="6"/>
+<!-- горизонтальный скругленный прямоугольный стык -->
+<rect x="42" y="18" width="12" height="4" rx="2" fill="currentColor" stroke="none"/>
+<!-- линии крутилки (три) -->
+<line x1="48" y1="12" x2="48" y2="6"/>
+<line x1="48" y1="12" x2="52" y2="14"/>
+<line x1="48" y1="12" x2="44" y2="14"/>
 
 <!-- крестовина -->
 <line x1="16" y1="36" x2="80" y2="36"/>
 
-<!-- боковые клапаны -->
+<!-- боковые крутилки идентичные верхней -->
 <circle cx="16" cy="36" r="6"/>
+<rect x="10" y="34" width="12" height="4" rx="2" fill="currentColor" stroke="none"/>
+<line x1="16" y1="36" x2="16" y2="30"/>
+<line x1="16" y1="36" x2="20" y2="38"/>
+<line x1="16" y1="36" x2="12" y2="38"/>
+
 <circle cx="80" cy="36" r="6"/>
+<rect x="74" y="34" width="12" height="4" rx="2" fill="currentColor" stroke="none"/>
+<line x1="80" y1="36" x2="80" y2="30"/>
+<line x1="80" y1="36" x2="84" y2="38"/>
+<line x1="80" y1="36" x2="76" y2="38"/>
 
 <!-- нижний блок -->
-<rect x="36" y="55" width="24" height="12" rx="2"/>
+<rect x="36" y="56" width="24" height="12" rx="2"/>
 
 <!-- основание -->
 <rect x="28" y="70" width="40" height="12" rx="2"/>
